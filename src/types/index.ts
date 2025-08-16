@@ -55,7 +55,30 @@ export interface BookingRequest {
   customerPhone: string;
   numberOfRooms: number;
   numberOfGuests: number;
-  status: 'pending' | 'confirmed';
+  status: 'pending' | 'confirmed' | 'cancelled';
   createdAt: string;
   totalAmount: number;
+}
+
+export interface Transfer {
+  id: string;
+  name: string;
+  type: 'bus' | 'car' | 'van';
+  description: string;
+  capacity: number;
+  price: number;
+  status: 'active' | 'inactive';
+}
+
+export interface FlightOption {
+  id: string;
+  airline: string;
+  flightNumber: string;
+  departure: string;
+  destination: string;
+  departureTime: string;
+  arrivalTime: string;
+  class: 'economy' | 'business' | 'first';
+  price: number;
+  status: 'active' | 'inactive';
 }

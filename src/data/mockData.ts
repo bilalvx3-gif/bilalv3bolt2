@@ -1,29 +1,98 @@
-import { Package, Hotel, BookingRequest } from '../types';
+import { Package, Hotel, BookingRequest, Transfer, FlightOption } from '../types';
 
 export const mockHotels: Hotel[] = [
   {
     id: 'hotel-1',
-    name: 'Hilton Suites Makkah',
+    name: 'Fairmont Makkah Clock Royal Tower',
     location: 'Adjacent to Masjid al-Haram, Makkah',
     image: 'https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg',
-    description: 'Luxury accommodation with stunning views of the Holy Kaaba',
+    description: 'Luxury accommodation with stunning views of the Holy Kaaba. Premium location.',
     rating: 4.8,
   },
   {
     id: 'hotel-2',
-    name: 'Madinah Marriott',
-    location: 'Walking distance to Prophet\'s Mosque, Madinah',
+    name: 'Madinah Hilton Hotel',
+    location: 'Prophet\'s Mosque Area, Madinah',
     image: 'https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg',
     description: 'Premium hotel near the Prophet\'s Mosque with excellent service',
     rating: 4.7,
   },
   {
     id: 'hotel-3',
-    name: 'Family Resort Makkah',
-    location: 'Family-oriented area near Haram, Makkah',
+    name: 'The Ritz-Carlton Makkah',
+    location: 'Premium Haram View, Makkah',
     image: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg',
-    description: 'Perfect for families with spacious rooms and kid-friendly amenities',
+    description: 'Ultra-luxury accommodation with premium Haram views and world-class service',
     rating: 4.5,
+  },
+];
+
+export const mockTransfers: Transfer[] = [
+  {
+    id: 'transfer-1',
+    name: 'Premium Coach Service',
+    type: 'bus',
+    description: 'Air-conditioned luxury coaches with experienced drivers for comfortable group travel.',
+    capacity: 45,
+    price: 50,
+    status: 'active',
+  },
+  {
+    id: 'transfer-2',
+    name: 'Private Luxury Fleet',
+    type: 'car',
+    description: 'Fleet of luxury Mercedes vehicles with professional chauffeurs for VIP service.',
+    capacity: 4,
+    price: 200,
+    status: 'active',
+  },
+  {
+    id: 'transfer-3',
+    name: 'Family-Friendly Transport',
+    type: 'van',
+    description: 'Comfortable vehicles equipped with child safety seats and entertainment systems for families.',
+    capacity: 8,
+    price: 75,
+    status: 'active',
+  },
+];
+
+export const mockFlights: FlightOption[] = [
+  {
+    id: 'flight-1',
+    airline: 'Saudi Arabian Airlines',
+    flightNumber: 'SV101',
+    departure: 'JFK New York',
+    destination: 'JED Jeddah',
+    departureTime: '23:30',
+    arrivalTime: '19:45',
+    class: 'economy',
+    price: 850,
+    status: 'active',
+  },
+  {
+    id: 'flight-2',
+    airline: 'Emirates',
+    flightNumber: 'EK205',
+    departure: 'LHR London',
+    destination: 'JED Jeddah',
+    departureTime: '14:20',
+    arrivalTime: '23:15',
+    class: 'business',
+    price: 2400,
+    status: 'active',
+  },
+  {
+    id: 'flight-3',
+    airline: 'Qatar Airways',
+    flightNumber: 'QR8354',
+    departure: 'DXB Dubai',
+    destination: 'MED Madinah',
+    departureTime: '08:30',
+    arrivalTime: '10:45',
+    class: 'economy',
+    price: 450,
+    status: 'active',
   },
 ];
 

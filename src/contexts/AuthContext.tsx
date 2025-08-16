@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { mockBookings } from '../data/mockData';
 
 interface AuthContextType {
   user: User | null;
@@ -7,6 +8,8 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string, phone: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  addBooking: (booking: any) => void;
+  updateBookingStatus: (bookingId: string, status: 'pending' | 'confirmed' | 'cancelled') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +37,7 @@ const mockUsers: User[] = [
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [bookings, setBookings] = useState(mockBookings);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -42,6 +46,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  const addBooking = (booking: any) => {
+    const newBooking = {
+      ...booking,
+      id: `booking-${Date.now()}`,
+      status: 'pending' as const,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    setBookings(prev => [...prev, newBooking]);
+    // Update mock data for consistency
+    mockBookings.push(newBooking);
+  };
+
+  const updateBookingStatus = (bookingId: string, status: 'pending' | 'confirmed' | 'cancelled') => {
+    setBookings(prev => prev.map(booking => 
+      booking.id === bookingId ? { ...booking, status } : booking
+    ));
+    // Update mock data for consistency
+    const bookingIndex = mockBookings.findIndex(b => b.id === bookingId);
+    if (bookingIndex !== -1) {
+      mockBookings[bookingIndex].status = status;
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Mock login logic
@@ -102,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, isLoading, addBooking, updateBookingStatus }}>
       {children}
     </AuthContext.Provider>
   );

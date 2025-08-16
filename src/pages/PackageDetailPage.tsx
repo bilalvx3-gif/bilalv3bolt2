@@ -42,10 +42,23 @@ export default function PackageDetailPage() {
       return;
     }
 
-    // Mock booking submission
+    const { addBooking } = useAuth();
     const totalAmount = packageData.price * bookingData.numberOfGuests;
-    alert(`Booking request submitted! Total: $${totalAmount.toLocaleString()}`);
+    
+    addBooking({
+      packageId: packageData.id,
+      userId: user.id,
+      customerName: bookingData.customerName,
+      customerEmail: bookingData.customerEmail,
+      customerPhone: bookingData.customerPhone,
+      numberOfRooms: bookingData.numberOfRooms,
+      numberOfGuests: bookingData.numberOfGuests,
+      totalAmount,
+    });
+    
+    alert('Booking request submitted successfully! Your request is pending admin approval.');
     setShowBookingForm(false);
+    navigate('/my-bookings');
   };
 
   const totalPrice = packageData.price * bookingData.numberOfGuests;
