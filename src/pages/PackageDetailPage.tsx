@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function PackageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, addBooking } = useAuth();
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingData, setBookingData] = useState({
     numberOfRooms: 1,
