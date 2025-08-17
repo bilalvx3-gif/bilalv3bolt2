@@ -18,9 +18,12 @@ export interface Hotel {
 
 export interface Transfer {
   id: string;
-  type: 'bus' | 'train' | 'car';
+  name: string;
+  type: 'bus' | 'car' | 'van';
   description: string;
+  capacity: number;
   price: number;
+  status: 'active' | 'inactive';
 }
 
 export interface Flight {
@@ -58,16 +61,6 @@ export interface BookingRequest {
   status: 'pending' | 'confirmed' | 'cancelled';
   createdAt: string;
   totalAmount: number;
-}
-
-export interface Transfer {
-  id: string;
-  name: string;
-  type: 'bus' | 'car' | 'van';
-  description: string;
-  capacity: number;
-  price: number;
-  status: 'active' | 'inactive';
 }
 
 export interface FlightOption {

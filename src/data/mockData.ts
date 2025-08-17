@@ -115,9 +115,12 @@ export const mockPackages: Package[] = [
     hotel: mockHotels[0],
     transfers: {
       id: 'transfer-1',
+      name: 'Private Luxury Car',
       type: 'car',
       description: 'Private luxury car with professional driver',
+      capacity: 4,
       price: 200,
+      status: 'active',
     },
     flight: {
       id: 'flight-1',
@@ -147,9 +150,12 @@ export const mockPackages: Package[] = [
     hotel: mockHotels[1],
     transfers: {
       id: 'transfer-2',
+      name: 'Comfortable Group Bus',
       type: 'bus',
       description: 'Comfortable group bus transportation',
+      capacity: 45,
       price: 100,
+      status: 'active',
     },
     flight: {
       id: 'flight-2',
@@ -179,9 +185,12 @@ export const mockPackages: Package[] = [
     hotel: mockHotels[2],
     transfers: {
       id: 'transfer-3',
+      name: 'Family-Friendly Vehicle',
       type: 'car',
       description: 'Family-friendly vehicle with car seats available',
+      capacity: 8,
       price: 150,
+      status: 'active',
     },
     flight: {
       id: 'flight-3',

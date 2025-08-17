@@ -561,7 +561,7 @@ export default function AdminDashboard() {
                   <td className="py-3 px-4">
                     <select
                       value={booking.status}
-                      onChange={(e) => handleStatusChange(booking.id, e.target.value as any)}
+                      onChange={(e) => handleStatusChange(booking.id, e.target.value as 'pending' | 'confirmed' | 'cancelled')}
                       className={`px-3 py-1 rounded-full text-sm font-semibold border-0 ${
                         booking.status === 'confirmed'
                           ? 'bg-green-100 text-green-800'

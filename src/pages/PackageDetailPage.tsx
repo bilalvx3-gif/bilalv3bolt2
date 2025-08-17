@@ -42,7 +42,6 @@ export default function PackageDetailPage() {
       return;
     }
 
-    const { addBooking } = useAuth();
     const totalAmount = packageData.price * bookingData.numberOfGuests;
     
     addBooking({
