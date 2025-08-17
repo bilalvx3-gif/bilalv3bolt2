@@ -2,13 +2,66 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Mail, Package as PackageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { mockBookings, mockPackages } from '../data/mockData';
+import { supabase } from '../lib/supabase';
+
+interface Booking {
+  id: string;
+  package_id: string;
+  user_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  number_of_rooms: number;
+  number_of_guests: number;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  packages?: {
+    title: string;
+    image: string;
+    location: string;
+    duration: number;
+  };
+}
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
-  
-  const userBookings = mockBookings.filter(booking => booking.userId === user?.id);
+  const [bookings, setBookings] = React.useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
+  React.useEffect(() => {
+    if (user) {
+      fetchBookings();
+    }
+  }, [user]);
+
+  const fetchBookings = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        packages (title, image, location, duration)
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setBookings(data);
+    }
+    setIsLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 py-12">
       <div className="max-w-4xl mx-auto px-4">
@@ -18,7 +71,7 @@ export default function MyBookingsPage() {
           <p className="text-gray-600">Track your Umrah reservations and booking status</p>
         </div>
 
-        {userBookings.length === 0 ? (
+        {bookings.length === 0 ? (
           /* Empty State */
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -38,9 +91,8 @@ export default function MyBookingsPage() {
         ) : (
           /* Bookings List */
           <div className="space-y-6">
-            {userBookings.map((booking) => {
-              const packageData = mockPackages.find(pkg => pkg.id === booking.packageId);
-              if (!packageData) return null;
+            {bookings.map((booking) => {
+              if (!booking.packages) return null;
 
               return (
                 <div key={booking.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -48,14 +100,16 @@ export default function MyBookingsPage() {
                     {/* Package Image */}
                     <div className="relative">
                       <img
-                        src={packageData.image}
-                        alt={packageData.title}
+                        src={booking.packages.image}
+                        alt={booking.packages.title}
                         className="w-full h-64 md:h-full object-cover"
                       />
                       <div className="absolute top-4 left-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           booking.status === 'confirmed'
                             ? 'bg-green-100 text-green-800'
+                            : booking.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           <div className="flex items-center space-x-1">
@@ -73,22 +127,22 @@ export default function MyBookingsPage() {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                            {packageData.title}
+                            {booking.packages.title}
                           </h3>
                           <div className="flex items-center text-gray-600 mb-2">
                             <MapPin size={16} className="mr-1" />
-                            <span className="text-sm">{packageData.location}</span>
+                            <span className="text-sm">{booking.packages.location}</span>
                           </div>
                           <div className="flex items-center text-gray-600 mb-4">
                             <Calendar size={16} className="mr-1" />
                             <span className="text-sm">
-                              Booked {new Date(booking.createdAt).toLocaleDateString()}
+                              Booked {new Date(booking.created_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-3xl font-bold text-emerald-600">
-                            ${booking.totalAmount.toLocaleString()}
+                            ${booking.total_amount.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">Total Amount</div>
                         </div>
@@ -101,9 +155,9 @@ export default function MyBookingsPage() {
                             Guest Details
                           </h4>
                           <div className="space-y-1 text-sm text-gray-600">
-                            <div>Guests: <span className="font-medium">{booking.numberOfGuests}</span></div>
-                            <div>Rooms: <span className="font-medium">{booking.numberOfRooms}</span></div>
-                            <div>Duration: <span className="font-medium">{packageData.duration} days</span></div>
+                            <div>Guests: <span className="font-medium">{booking.number_of_guests}</span></div>
+                            <div>Rooms: <span className="font-medium">{booking.number_of_rooms}</span></div>
+                            <div>Duration: <span className="font-medium">{booking.packages.duration} days</span></div>
                           </div>
                         </div>
 
@@ -113,8 +167,8 @@ export default function MyBookingsPage() {
                             Contact Details
                           </h4>
                           <div className="space-y-1 text-sm text-gray-600">
-                            <div>{booking.customerEmail}</div>
-                            {booking.customerPhone && <div>{booking.customerPhone}</div>}
+                            <div>{booking.customer_email}</div>
+                            {booking.customer_phone && <div>{booking.customer_phone}</div>}
                           </div>
                         </div>
 
@@ -126,6 +180,8 @@ export default function MyBookingsPage() {
                               <span className={`ml-2 px-2 py-1 rounded text-xs ${
                                 booking.status === 'confirmed'
                                   ? 'bg-green-100 text-green-800'
+                                  : booking.status === 'cancelled'
+                                  ? 'bg-red-100 text-red-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}>
                                 {booking.status}
@@ -133,6 +189,8 @@ export default function MyBookingsPage() {
                             </div>
                             {booking.status === 'confirmed' ? (
                               <p className="text-green-600">Your booking has been confirmed! Check your email for details.</p>
+                            ) : booking.status === 'cancelled' ? (
+                              <p className="text-red-600">Your booking has been cancelled. Contact support for more information.</p>
                             ) : (
                               <p className="text-yellow-600">Your booking is being processed. We'll update you soon.</p>
                             )}
@@ -142,7 +200,7 @@ export default function MyBookingsPage() {
 
                       <div className="flex space-x-4">
                         <Link
-                          to={`/packages/${packageData.id}`}
+                          to={`/packages/${booking.package_id}`}
                           className="flex-1 border border-emerald-600 text-emerald-600 py-3 px-4 rounded-lg font-semibold text-center hover:bg-emerald-50 transition-colors"
                         >
                           View Package Details

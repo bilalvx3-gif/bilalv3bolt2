@@ -1,14 +1,53 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, MapPin, Calendar, Filter } from 'lucide-react';
-import { mockPackages } from '../data/mockData';
+import { supabase } from '../lib/supabase';
+
+interface Package {
+  id: string;
+  title: string;
+  price: number;
+  duration: number;
+  image: string;
+  description: string;
+  features: string[];
+  hotel_id: string;
+  transfer_id: string;
+  flight_departure: string;
+  flight_destination: string;
+  rating: number;
+  location: string;
+  category: string;
+  status: string;
+  created_at: string;
+}
 
 export default function PackagesPage() {
+  const [packages, setPackages] = useState<Package[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredPackages = mockPackages.filter(pkg => {
+  React.useEffect(() => {
+    fetchPackages();
+  }, []);
+
+  const fetchPackages = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setPackages(data);
+    }
+    setIsLoading(false);
+  };
+
+  const filteredPackages = packages.filter(pkg => {
     const matchesSearch = pkg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pkg.location.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -23,6 +62,14 @@ export default function PackagesPage() {
     
     return matchesSearch && matchesPrice && matchesDuration;
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

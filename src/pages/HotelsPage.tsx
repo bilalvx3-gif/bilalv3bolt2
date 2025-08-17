@@ -1,8 +1,49 @@
 import React from 'react';
-import { MapPin, Star } from 'lucide-react';
-import { mockHotels } from '../data/mockData';
+import { MapPin, Star, Building2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+interface Hotel {
+  id: string;
+  name: string;
+  location: string;
+  image: string;
+  description: string;
+  rating: number;
+  distance_to_haram: string;
+  status: string;
+  created_at: string;
+}
 
 export default function HotelsPage() {
+  const [hotels, setHotels] = React.useState<Hotel[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchHotels();
+  }, []);
+
+  const fetchHotels = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('hotels')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setHotels(data);
+    }
+    setIsLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -18,7 +59,7 @@ export default function HotelsPage() {
       {/* Hotels Grid */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockHotels.map((hotel) => (
+          {hotels.map((hotel) => (
             <div key={hotel.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
               <div className="relative">
                 <img
@@ -55,7 +96,7 @@ export default function HotelsPage() {
           ))}
         </div>
 
-        {mockHotels.length === 0 && (
+        {hotels.length === 0 && (
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Building2 size={32} className="text-gray-400" />

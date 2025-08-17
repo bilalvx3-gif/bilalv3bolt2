@@ -1,130 +1,158 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, BookingRequest } from '../types';
-import { mockBookings } from '../data/mockData';
+import { supabase } from '../lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'customer' | 'admin';
+  created_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
+  supabaseUser: SupabaseUser | null;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string, phone: string) => Promise<boolean>;
-  logout: () => void;
+  signup: (name: string, email: string, password: string, phone?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   isLoading: boolean;
-  addBooking: (booking: Omit<BookingRequest, 'id' | 'status' | 'createdAt'>) => void;
-  updateBookingStatus: (bookingId: string, status: 'pending' | 'confirmed' | 'cancelled') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users data
-const mockUsers: User[] = [
-  {
-    id: 'admin-1',
-    name: 'Admin',
-    email: 'admin@umrahbooking.com',
-    phone: '+1234567890',
-    role: 'admin',
-    createdAt: '2025-01-01',
-  },
-  {
-    id: 'user-1',
-    name: 'R S',
-    email: 'bilalxv1@gmail.com',
-    phone: '',
-    role: 'customer',
-    createdAt: '2025-08-13',
-  },
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        await fetchUserProfile(session.user.id);
+      } else {
+        setSupabaseUser(null);
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const addBooking = (booking: Omit<BookingRequest, 'id' | 'status' | 'createdAt'>) => {
-    const newBooking = {
-      ...booking,
-      id: `booking-${Date.now()}`,
-      status: 'pending' as const,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    // Update mock data for consistency
-    mockBookings.push(newBooking);
-  };
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  const updateBookingStatus = (bookingId: string, status: 'pending' | 'confirmed' | 'cancelled') => {
-    // Update mock data for consistency
-    const bookingIndex = mockBookings.findIndex(b => b.id === bookingId);
-    if (bookingIndex !== -1) {
-      mockBookings[bookingIndex].status = status;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (data) {
+        setUser({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          role: data.role as 'customer' | 'admin',
+          created_at: data.created_at,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock login logic
-    if (email === 'admin@umrahbooking.com' && password === 'Admin@123') {
-      const adminUser = mockUsers.find(u => u.email === email);
-      if (adminUser) {
-        setUser(adminUser);
-        localStorage.setItem('currentUser', JSON.stringify(adminUser));
-        return true;
-      }
-    }
-    
-    // For demo purposes, allow any email/password for customers
-    if (email && password) {
-      let customerUser = mockUsers.find(u => u.email === email);
-      if (!customerUser) {
-        customerUser = {
-          id: `user-${Date.now()}`,
-          name: email.split('@')[0],
-          email,
-          role: 'customer',
-          createdAt: new Date().toISOString(),
-        };
-        mockUsers.push(customerUser);
-      }
-      setUser(customerUser);
-      localStorage.setItem('currentUser', JSON.stringify(customerUser));
-      return true;
-    }
-    
-    return false;
-  };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-  const signup = async (name: string, email: string, password: string, phone: string): Promise<boolean> => {
-    // Check if user already exists
-    if (mockUsers.find(u => u.email === email)) {
+      if (error) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      return !!data.user;
+    } catch (error) {
+      console.error('Login error:', error);
       return false;
     }
-
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name,
-      email,
-      phone,
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-
-    mockUsers.push(newUser);
-    setUser(newUser);
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    return true;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
+  const signup = async (name: string, email: string, password: string, phone?: string): Promise<boolean> => {
+    try {
+      // First, sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError) {
+        console.error('Signup error:', authError);
+        return false;
+      }
+
+      if (authData.user) {
+        // Create user profile
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            name,
+            email,
+            phone: phone || null,
+            role: 'customer',
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          return false;
+        }
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Signup error:', error);
+      return false;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading, addBooking, updateBookingStatus }}>
+    <AuthContext.Provider value={{ user, supabaseUser, login, signup, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

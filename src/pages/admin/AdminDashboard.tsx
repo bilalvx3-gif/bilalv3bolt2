@@ -1,31 +1,236 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Package, Building2, Users, DollarSign, Calendar, TrendingUp, 
   Plus, Search, Edit, Trash2, Eye, Car, Plane, MapPin, Star, Clock
 } from 'lucide-react';
-import { mockPackages, mockHotels, mockBookings, mockTransfers, mockFlights } from '../../data/mockData';
-import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import AddPackageModal from '../../components/admin/AddPackageModal';
+import AddHotelModal from '../../components/admin/AddHotelModal';
+import AddTransferModal from '../../components/admin/AddTransferModal';
+import AddFlightModal from '../../components/admin/AddFlightModal';
+
+interface Package {
+  id: string;
+  title: string;
+  price: number;
+  duration: number;
+  image: string;
+  description: string;
+  features: string[];
+  hotel_id: string;
+  transfer_id: string;
+  flight_departure: string;
+  flight_destination: string;
+  rating: number;
+  location: string;
+  category: string;
+  status: string;
+  created_at: string;
+  hotels?: { name: string; location: string };
+}
+
+interface Hotel {
+  id: string;
+  name: string;
+  location: string;
+  image: string;
+  description: string;
+  rating: number;
+  distance_to_haram: string;
+  status: string;
+  created_at: string;
+}
+
+interface Transfer {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  capacity: number;
+  price: number;
+  status: string;
+  created_at: string;
+}
+
+interface Flight {
+  id: string;
+  airline: string;
+  flight_number: string;
+  departure: string;
+  destination: string;
+  departure_time: string;
+  arrival_time: string;
+  class: string;
+  price: number;
+  status: string;
+  created_at: string;
+}
+
+interface Booking {
+  id: string;
+  package_id: string;
+  user_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  number_of_rooms: number;
+  number_of_guests: number;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  packages?: { title: string };
+}
 
 export default function AdminDashboard() {
-  const { updateBookingStatus } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   
-  const totalRevenue = mockBookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
-  const pendingRequests = mockBookings.filter(b => b.status === 'pending').length;
+  // Data states
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  
+  // Modal states
+  const [showAddPackageModal, setShowAddPackageModal] = useState(false);
+  const [showAddHotelModal, setShowAddHotelModal] = useState(false);
+  const [showAddTransferModal, setShowAddTransferModal] = useState(false);
+  const [showAddFlightModal, setShowAddFlightModal] = useState(false);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    setIsLoading(true);
+    await Promise.all([
+      fetchPackages(),
+      fetchHotels(),
+      fetchTransfers(),
+      fetchFlights(),
+      fetchBookings(),
+    ]);
+    setIsLoading(false);
+  };
+
+  const fetchPackages = async () => {
+    const { data, error } = await supabase
+      .from('packages')
+      .select(`
+        *,
+        hotels (name, location)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setPackages(data);
+    }
+  };
+
+  const fetchHotels = async () => {
+    const { data, error } = await supabase
+      .from('hotels')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setHotels(data);
+    }
+  };
+
+  const fetchTransfers = async () => {
+    const { data, error } = await supabase
+      .from('transfers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setTransfers(data);
+    }
+  };
+
+  const fetchFlights = async () => {
+    const { data, error } = await supabase
+      .from('flights')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setFlights(data);
+    }
+  };
+
+  const fetchBookings = async () => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        packages (title)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setBookings(data);
+    }
+  };
+
+  const handleStatusChange = async (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: newStatus })
+      .eq('id', bookingId);
+
+    if (!error) {
+      fetchBookings(); // Refresh bookings
+    }
+  };
+
+  const handleDeleteItem = async (table: string, id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      // Refresh the appropriate data
+      switch (table) {
+        case 'packages':
+          fetchPackages();
+          break;
+        case 'hotels':
+          fetchHotels();
+          break;
+        case 'transfers':
+          fetchTransfers();
+          break;
+        case 'flights':
+          fetchFlights();
+          break;
+      }
+    }
+  };
+
+  const totalRevenue = bookings.reduce((sum, booking) => sum + booking.total_amount, 0);
+  const pendingRequests = bookings.filter(b => b.status === 'pending').length;
 
   const stats = [
     {
       label: 'Total Packages',
-      value: mockPackages.length,
+      value: packages.length,
       icon: Package,
       color: 'bg-blue-500',
       bgColor: 'bg-blue-100',
     },
     {
       label: 'Total Bookings',
-      value: mockBookings.length,
+      value: bookings.length,
       icon: Users,
       color: 'bg-green-500',
       bgColor: 'bg-green-100',
@@ -56,12 +261,21 @@ export default function AdminDashboard() {
   ];
 
   const filteredBookings = statusFilter === 'all' 
-    ? mockBookings 
-    : mockBookings.filter(booking => booking.status === statusFilter);
+    ? bookings 
+    : bookings.filter(booking => booking.status === statusFilter);
 
-  const handleStatusChange = (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
-    updateBookingStatus(bookingId, newStatus);
-  };
+  const filteredPackages = packages.filter(pkg =>
+    pkg.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   const renderDashboard = () => (
     <>
@@ -108,21 +322,23 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {mockBookings.slice(0, 5).map((booking) => (
+              {bookings.slice(0, 5).map((booking) => (
                 <tr key={booking.id} className="border-b border-gray-100">
-                  <td className="py-3 px-4">{booking.customerName}</td>
+                  <td className="py-3 px-4">{booking.customer_name}</td>
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {booking.customerEmail}
+                    {booking.customer_email}
                   </td>
-                  <td className="py-3 px-4">{booking.numberOfGuests}</td>
-                  <td className="py-3 px-4 font-semibold">${booking.totalAmount.toLocaleString()}</td>
+                  <td className="py-3 px-4">{booking.number_of_guests}</td>
+                  <td className="py-3 px-4 font-semibold">${booking.total_amount.toLocaleString()}</td>
                   <td className="py-3 px-4 text-sm text-gray-600">
-                    {new Date(booking.createdAt).toLocaleDateString()}
+                    {new Date(booking.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                       booking.status === 'confirmed'
                         ? 'bg-green-100 text-green-800'
+                        : booking.status === 'cancelled'
+                        ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {booking.status}
@@ -180,10 +396,13 @@ export default function AdminDashboard() {
           <Package size={24} className="text-emerald-600" />
           <div>
             <h2 className="text-xl font-bold text-gray-900">Package Management</h2>
-            <p className="text-sm text-gray-500">{mockPackages.length} packages</p>
+            <p className="text-sm text-gray-500">{packages.length} packages</p>
           </div>
         </div>
-        <button className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+        <button 
+          onClick={() => setShowAddPackageModal(true)}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+        >
           <Plus size={18} />
           <span>Add Package</span>
         </button>
@@ -195,6 +414,8 @@ export default function AdminDashboard() {
           <input
             type="text"
             placeholder="Search packages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
         </div>
@@ -213,7 +434,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {mockPackages.map((pkg) => (
+            {filteredPackages.map((pkg) => (
               <tr key={pkg.id} className="border-b border-gray-100">
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
@@ -228,13 +449,15 @@ export default function AdminDashboard() {
                 <td className="py-3 px-4">{pkg.duration} days</td>
                 <td className="py-3 px-4">
                   <div>
-                    <p className="font-medium text-gray-900">{pkg.hotel.name}</p>
+                    <p className="font-medium text-gray-900">{pkg.hotels?.name || 'N/A'}</p>
                     <p className="text-sm text-gray-500">{pkg.location}</p>
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    Active
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    pkg.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {pkg.status}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -242,7 +465,10 @@ export default function AdminDashboard() {
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => handleDeleteItem('packages', pkg.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -262,10 +488,13 @@ export default function AdminDashboard() {
           <Building2 size={24} className="text-emerald-600" />
           <div>
             <h2 className="text-xl font-bold text-gray-900">Hotel Management</h2>
-            <p className="text-sm text-gray-500">{mockHotels.length} hotels</p>
+            <p className="text-sm text-gray-500">{hotels.length} hotels</p>
           </div>
         </div>
-        <button className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+        <button 
+          onClick={() => setShowAddHotelModal(true)}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+        >
           <Plus size={18} />
           <span>Add Hotel</span>
         </button>
@@ -284,7 +513,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {mockHotels.map((hotel) => (
+            {hotels.map((hotel) => (
               <tr key={hotel.id} className="border-b border-gray-100">
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
@@ -309,12 +538,14 @@ export default function AdminDashboard() {
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm text-gray-600">
-                    {hotel.id === 'hotel-1' ? '50m' : hotel.id === 'hotel-2' ? '200m' : '100m'}
+                    {hotel.distance_to_haram || 'N/A'}
                   </span>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    Active
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    hotel.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {hotel.status}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -322,7 +553,10 @@ export default function AdminDashboard() {
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => handleDeleteItem('hotels', hotel.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -342,10 +576,13 @@ export default function AdminDashboard() {
           <Car size={24} className="text-emerald-600" />
           <div>
             <h2 className="text-xl font-bold text-gray-900">Transfer Management</h2>
-            <p className="text-sm text-gray-500">{mockTransfers.length} options</p>
+            <p className="text-sm text-gray-500">{transfers.length} options</p>
           </div>
         </div>
-        <button className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+        <button 
+          onClick={() => setShowAddTransferModal(true)}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+        >
           <Plus size={18} />
           <span>Add Transfer</span>
         </button>
@@ -364,7 +601,7 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {mockTransfers.map((transfer) => (
+            {transfers.map((transfer) => (
               <tr key={transfer.id} className="border-b border-gray-100">
                 <td className="py-3 px-4">
                   <div>
@@ -390,8 +627,10 @@ export default function AdminDashboard() {
                   <span className="font-semibold">${transfer.price}</span>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    Active
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    transfer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {transfer.status}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -399,7 +638,10 @@ export default function AdminDashboard() {
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => handleDeleteItem('transfers', transfer.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -419,10 +661,13 @@ export default function AdminDashboard() {
           <Plane size={24} className="text-emerald-600" />
           <div>
             <h2 className="text-xl font-bold text-gray-900">Flight Management</h2>
-            <p className="text-sm text-gray-500">{mockFlights.length} flights</p>
+            <p className="text-sm text-gray-500">{flights.length} flights</p>
           </div>
         </div>
-        <button className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+        <button 
+          onClick={() => setShowAddFlightModal(true)}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+        >
           <Plus size={18} />
           <span>Add Flight</span>
         </button>
@@ -442,12 +687,12 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {mockFlights.map((flight) => (
+            {flights.map((flight) => (
               <tr key={flight.id} className="border-b border-gray-100">
                 <td className="py-3 px-4">
                   <div>
                     <p className="font-medium text-gray-900">{flight.airline}</p>
-                    <p className="text-sm text-gray-500">{flight.flightNumber}</p>
+                    <p className="text-sm text-gray-500">{flight.flight_number}</p>
                   </div>
                 </td>
                 <td className="py-3 px-4">
@@ -460,7 +705,7 @@ export default function AdminDashboard() {
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-1">
                     <Clock size={16} className="text-gray-400" />
-                    <span className="text-sm">{flight.departureTime} - {flight.arrivalTime}</span>
+                    <span className="text-sm">{flight.departure_time} - {flight.arrival_time}</span>
                   </div>
                 </td>
                 <td className="py-3 px-4">
@@ -474,8 +719,10 @@ export default function AdminDashboard() {
                   <span className="font-semibold">${flight.price}</span>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    Active
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    flight.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {flight.status}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -483,7 +730,10 @@ export default function AdminDashboard() {
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => handleDeleteItem('flights', flight.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -503,7 +753,7 @@ export default function AdminDashboard() {
           <Calendar size={24} className="text-emerald-600" />
           <div>
             <h2 className="text-xl font-bold text-gray-900">Booking Management</h2>
-            <p className="text-sm text-gray-500">{mockBookings.length} bookings</p>
+            <p className="text-sm text-gray-500">{bookings.length} bookings</p>
           </div>
         </div>
         <select
@@ -532,57 +782,54 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {filteredBookings.map((booking) => {
-              const packageData = mockPackages.find(pkg => pkg.id === booking.packageId);
-              return (
-                <tr key={booking.id} className="border-b border-gray-100">
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{booking.customerName}</p>
-                      <p className="text-sm text-gray-500">{booking.customerEmail}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{packageData?.title || 'Unknown Package'}</p>
-                      <p className="text-sm text-gray-500">#{booking.id.slice(-6)}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="text-sm text-gray-600">
-                      <p>{booking.numberOfGuests} guests</p>
-                      <p>{booking.numberOfRooms} rooms</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-semibold">${booking.totalAmount.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">
-                    {new Date(booking.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={booking.status}
-                      onChange={(e) => handleStatusChange(booking.id, e.target.value as 'pending' | 'confirmed' | 'cancelled')}
-                      className={`px-3 py-1 rounded-full text-sm font-semibold border-0 ${
-                        booking.status === 'confirmed'
-                          ? 'bg-green-100 text-green-800'
-                          : booking.status === 'cancelled'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                      <Eye size={16} />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {filteredBookings.map((booking) => (
+              <tr key={booking.id} className="border-b border-gray-100">
+                <td className="py-3 px-4">
+                  <div>
+                    <p className="font-medium text-gray-900">{booking.customer_name}</p>
+                    <p className="text-sm text-gray-500">{booking.customer_email}</p>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <div>
+                    <p className="font-medium text-gray-900">{booking.packages?.title || 'Unknown Package'}</p>
+                    <p className="text-sm text-gray-500">#{booking.id.slice(-6)}</p>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="text-sm text-gray-600">
+                    <p>{booking.number_of_guests} guests</p>
+                    <p>{booking.number_of_rooms} rooms</p>
+                  </div>
+                </td>
+                <td className="py-3 px-4 font-semibold">${booking.total_amount.toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm text-gray-600">
+                  {new Date(booking.created_at).toLocaleDateString()}
+                </td>
+                <td className="py-3 px-4">
+                  <select
+                    value={booking.status}
+                    onChange={(e) => handleStatusChange(booking.id, e.target.value as 'pending' | 'confirmed' | 'cancelled')}
+                    className={`px-3 py-1 rounded-full text-sm font-semibold border-0 ${
+                      booking.status === 'confirmed'
+                        ? 'bg-green-100 text-green-800'
+                        : booking.status === 'cancelled'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </td>
+                <td className="py-3 px-4">
+                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    <Eye size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -629,6 +876,28 @@ export default function AdminDashboard() {
         {activeTab === 'flights' && renderFlights()}
         {activeTab === 'bookings' && renderBookings()}
       </div>
+
+      {/* Modals */}
+      <AddPackageModal 
+        isOpen={showAddPackageModal} 
+        onClose={() => setShowAddPackageModal(false)}
+        onSuccess={fetchPackages}
+      />
+      <AddHotelModal 
+        isOpen={showAddHotelModal} 
+        onClose={() => setShowAddHotelModal(false)}
+        onSuccess={fetchHotels}
+      />
+      <AddTransferModal 
+        isOpen={showAddTransferModal} 
+        onClose={() => setShowAddTransferModal(false)}
+        onSuccess={fetchTransfers}
+      />
+      <AddFlightModal 
+        isOpen={showAddFlightModal} 
+        onClose={() => setShowAddFlightModal(false)}
+        onSuccess={fetchFlights}
+      />
     </div>
   );
 }
