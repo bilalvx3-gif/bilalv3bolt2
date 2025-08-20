@@ -148,13 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (name: string, email: string, password: string, phone?: string): Promise<boolean> => {
     try {
-      // Sign up with metadata only; do NOT insert profile here (RLS blocks before confirmation)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { name, phone, role: 'customer' },
-          // emailRedirectTo: `${window.location.origin}/auth/callback`, // optional
+          emailRedirectTo: `${window.location.origin}/email-verification`,
         },
       });
 
@@ -163,8 +162,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // If confirmation is required, there may be no session; that's fine.
-      // Profile will be created on first confirmed session by fetchUserProfile.
       return !!data.user;
     } catch (error) {
       console.error('Signup error:', error);

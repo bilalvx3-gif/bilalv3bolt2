@@ -8,6 +8,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import EmailVerification from './pages/EmailVerification';
+import PhoneVerification from './pages/PhoneVerification';
 import PackagesPage from './pages/PackagesPage';
 import PackageDetailPage from './pages/PackageDetailPage';
 import HotelsPage from './pages/HotelsPage';
@@ -26,6 +28,8 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/email-verification" element={<EmailVerification />} />
+            <Route path="/phone-verification" element={<PhoneVerification />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/packages/:id" element={<PackageDetailPage />} />
             <Route path="/hotels" element={<HotelsPage />} />

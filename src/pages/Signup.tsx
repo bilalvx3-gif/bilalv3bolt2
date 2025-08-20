@@ -25,7 +25,7 @@ export default function Signup() {
     try {
       const success = await signup(formData.name, formData.email, formData.password, formData.phone);
       if (success) {
-        navigate('/');
+        navigate(`/email-verification?email=${encodeURIComponent(formData.email)}`);
       } else {
         setError('An account with this email already exists');
       }
