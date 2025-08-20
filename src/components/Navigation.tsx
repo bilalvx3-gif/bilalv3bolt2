@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Package, Building2, Settings, User, LogOut, Menu, X } from 'lucide-react';
+import { Home, Package, Building2, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Navigation() {

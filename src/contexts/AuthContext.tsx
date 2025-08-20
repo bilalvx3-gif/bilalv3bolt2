@@ -39,10 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setSupabaseUser(session.user);
-        await fetchUserProfile(session.user.id);
+        // Do not await here; let fetchUserProfile control loading
+        fetchUserProfile(session.user.id);
       } else {
         setSupabaseUser(null);
         setUser(null);
@@ -60,6 +61,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('id', userId)
         .single();
+
+      // If profile doesn't exist yet (common right after email confirmation), create it
+      if (error && (typeof (error as { code?: string }).code === 'string') && (error as { code?: string }).code === 'PGRST116') {
+        const { data: authUserRes } = await supabase.auth.getUser();
+        const authUser = authUserRes?.user;
+
+        if (authUser) {
+          const { error: insertError, data: inserted } = await supabase
+            .from('users')
+            .insert({
+              id: authUser.id,
+              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+              email: authUser.email,
+              phone: authUser.user_metadata?.phone || null,
+              role: 'customer',
+            })
+            .select()
+            .single();
+
+          if (!insertError && inserted) {
+            setUser({
+              id: inserted.id,
+              name: inserted.name,
+              email: inserted.email,
+              phone: inserted.phone || undefined,
+              role: inserted.role as 'customer' | 'admin',
+              created_at: inserted.created_at,
+            });
+            return;
+          }
+        }
+      }
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -86,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -93,50 +127,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Login error:', error);
+        setIsLoading(false);
         return false;
       }
 
-      return !!data.user;
+      if (data.user) {
+        setSupabaseUser(data.user);
+        await fetchUserProfile(data.user.id);
+        return true;
+      }
+
+      setIsLoading(false);
+      return false;
     } catch (error) {
       console.error('Login error:', error);
+      setIsLoading(false);
       return false;
     }
   };
 
   const signup = async (name: string, email: string, password: string, phone?: string): Promise<boolean> => {
     try {
-      // First, sign up with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Sign up with metadata only; do NOT insert profile here (RLS blocks before confirmation)
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { name, phone, role: 'customer' },
+          // emailRedirectTo: `${window.location.origin}/auth/callback`, // optional
+        },
       });
 
-      if (authError) {
-        console.error('Signup error:', authError);
+      if (error) {
+        console.error('Signup error:', error);
         return false;
       }
 
-      if (authData.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            name,
-            email,
-            phone: phone || null,
-            role: 'customer',
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          return false;
-        }
-
-        return true;
-      }
-
-      return false;
+      // If confirmation is required, there may be no session; that's fine.
+      // Profile will be created on first confirmed session by fetchUserProfile.
+      return !!data.user;
     } catch (error) {
       console.error('Signup error:', error);
       return false;

@@ -29,7 +29,7 @@ export default function Signup() {
       } else {
         setError('An account with this email already exists');
       }
-    } catch (err) {
+    } catch {
       setError('Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
