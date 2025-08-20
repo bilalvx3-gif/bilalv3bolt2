@@ -118,10 +118,13 @@ export default function Login() {
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 font-medium mb-2">Demo Credentials:</p>
             <p className="text-xs text-gray-500">
-              <strong>Admin:</strong> admin@umrahbooking.com / Admin@123
+              <strong>Admin:</strong> Create admin account in Supabase Dashboard
             </p>
             <p className="text-xs text-gray-500">
-              <strong>Customer:</strong> Any email and password
+              <strong>Customer:</strong> Sign up with email verification
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              <strong>Note:</strong> After connecting to Supabase, create an admin user in the Authentication section of your Supabase dashboard with email: admin@umrahbooking.com
             </p>
           </div>
         </div>
