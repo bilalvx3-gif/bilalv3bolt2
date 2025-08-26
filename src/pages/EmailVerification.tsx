@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import EmailVerificationDebug from '../components/EmailVerificationDebug';
 
 export default function EmailVerification() {
   const [searchParams] = useSearchParams();
@@ -147,6 +148,9 @@ export default function EmailVerification() {
                   {message}
                 </div>
               )}
+
+              {/* Debug Component */}
+              {email && <EmailVerificationDebug email={email} />}
             </div>
           )}
 

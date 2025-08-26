@@ -25,12 +25,21 @@ export default function Signup() {
     try {
       const success = await signup(formData.name, formData.email, formData.password, formData.phone);
       if (success) {
+        // Show success message before redirecting
+        setError(''); // Clear any previous errors
         navigate(`/email-verification?email=${encodeURIComponent(formData.email)}`);
       } else {
-        setError('An account with this email already exists');
+        setError('An account with this email already exists or signup failed. Please try again.');
       }
-    } catch {
-      setError('Signup failed. Please try again.');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      if (error.message?.includes('email')) {
+        setError('Email verification failed. Please check your email settings or try again.');
+      } else if (error.message?.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError('Signup failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -159,7 +159,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Signup error:', error);
+        // Check for specific email-related errors
+        if (error.message.includes('email') || error.message.includes('verification')) {
+          console.error('Email verification error:', error.message);
+        }
         return false;
+      }
+
+      // Check if user was created but email confirmation is required
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('User created successfully. Email verification required.');
+        return true;
       }
 
       return !!data.user;
