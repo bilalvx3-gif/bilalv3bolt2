@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isVerificationComplete } = useAuth();
 
   if (isLoading) {
     return (
@@ -20,6 +20,16 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // If user is not fully verified, redirect to appropriate verification step
+  if (!isVerificationComplete && user.role !== 'admin') {
+    if (!user.email_verified) {
+      return <Navigate to={`/email-verification?email=${encodeURIComponent(user.email)}`} replace />;
+    }
+    if (!user.phone_verified) {
+      return <Navigate to="/phone-verification" replace />;
+    }
   }
 
   if (adminOnly && user.role !== 'admin') {

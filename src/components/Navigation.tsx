@@ -4,7 +4,7 @@ import { Home, Package, Building2, Settings, LogOut, Menu, X } from 'lucide-reac
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Navigation() {
-  const { user, logout } = useAuth();
+  const { user, logout, isVerificationComplete } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -30,6 +30,9 @@ export default function Navigation() {
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
 
+  // Hide navigation for unverified users (except admin)
+  const showNavigation = !user || user.role === 'admin' || isVerificationComplete;
+
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,7 +46,7 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {showNavigation && <div className="hidden md:flex items-center space-x-8">
             {links.map((link) => {
               const Icon = link.icon;
               return (
@@ -61,7 +64,7 @@ export default function Navigation() {
                 </Link>
               );
             })}
-          </div>
+          </div>}
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-4">
@@ -126,7 +129,7 @@ export default function Navigation() {
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
+      {mobileMenuOpen && showNavigation && (
         <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="px-4 py-2 space-y-1">
             {links.map((link) => {

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 export default function EmailVerification() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { markEmailVerified } = useAuth();
   const [status, setStatus] = useState<'pending' | 'verified' | 'error'>('pending');
   const [isResending, setIsResending] = useState(false);
   const [email, setEmail] = useState('');
@@ -24,6 +25,7 @@ export default function EmailVerification() {
       if (data.session && data.session.user.email_confirmed_at) {
         setStatus('verified');
         setMessage('Email verified successfully! Redirecting to phone verification...');
+        markEmailVerified();
         
         // Redirect to phone verification after 2 seconds
         setTimeout(() => {
