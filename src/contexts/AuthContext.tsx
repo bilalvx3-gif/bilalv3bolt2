@@ -8,14 +8,19 @@ interface User {
   email: string;
   phone?: string;
   role: 'customer' | 'admin';
+  email_verified: boolean;
+  phone_verified: boolean;
   created_at: string;
 }
 
 interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
+  isVerificationComplete: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string, phone?: string) => Promise<boolean>;
+  markEmailVerified: () => void;
+  markPhoneVerified: () => void;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -26,6 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isVerificationComplete = user ? user.email_verified && user.phone_verified : false;
 
   useEffect(() => {
     // Get initial session
@@ -107,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.email,
           phone: data.phone,
           role: data.role as 'customer' | 'admin',
+          email_verified: data.email_verified || false,
+          phone_verified: data.phone_verified || false,
           created_at: data.created_at,
         });
       }
@@ -114,6 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error fetching user profile:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const markEmailVerified = () => {
+    if (user) {
+      setUser({ ...user, email_verified: true });
+    }
+  };
+
+  const markPhoneVerified = () => {
+    if (user) {
+      setUser({ ...user, phone_verified: true });
     }
   };
 
@@ -188,7 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, supabaseUser, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      supabaseUser, 
+      isVerificationComplete,
+      login, 
+      signup, 
+      markEmailVerified,
+      markPhoneVerified,
+      logout, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

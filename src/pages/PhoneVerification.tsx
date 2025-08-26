@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function PhoneVerification() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, markPhoneVerified } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp' | 'verified'>('phone');
@@ -61,6 +61,7 @@ export default function PhoneVerification() {
       // For demo purposes, accept any 6-digit OTP
       if (otp.length === 6) {
         setStep('verified');
+        markPhoneVerified();
         
         // Redirect to dashboard after verification
         setTimeout(() => {

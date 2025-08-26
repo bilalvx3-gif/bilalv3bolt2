@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Users, Star, Plane, Car, Building2, Check, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import BookingForm from '../components/BookingForm';
 import type { Package, Hotel, Transfer } from '../types';
 
 export default function PackageDetailPage() {
@@ -13,13 +14,10 @@ export default function PackageDetailPage() {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingStep, setBookingStep] = useState<'details' | 'booking' | 'success'>('details');
   const [bookingData, setBookingData] = useState({
     rooms: 1,
     guests: 2,
-    customerName: user?.user_metadata?.name || '',
-    customerEmail: user?.email || '',
-    customerPhone: ''
   });
 
   useEffect(() => {
@@ -71,40 +69,11 @@ export default function PackageDetailPage() {
     }
   };
 
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user || !packageData) {
-      alert('Please log in to make a booking');
-      return;
-    }
-
-    try {
-      const totalAmount = packageData.price * bookingData.guests;
-      
-      const { error } = await supabase
-        .from('bookings')
-        .insert({
-          package_id: packageData.id,
-          user_id: user.id,
-          customer_name: bookingData.customerName,
-          customer_email: bookingData.customerEmail,
-          customer_phone: bookingData.customerPhone,
-          number_of_rooms: bookingData.rooms,
-          number_of_guests: bookingData.guests,
-          total_amount: totalAmount,
-          status: 'pending'
-        });
-
-      if (error) throw error;
-
-      alert('Booking request submitted successfully! We will contact you soon.');
-      setShowBookingForm(false);
+  const handleBookingSuccess = () => {
+    setBookingStep('success');
+    setTimeout(() => {
       navigate('/my-bookings');
-    } catch (error) {
-      console.error('Error submitting booking:', error);
-      alert('Failed to submit booking. Please try again.');
-    }
+    }, 3000);
   };
 
   if (loading) {
@@ -126,6 +95,48 @@ export default function PackageDetailPage() {
           >
             ← Back to Packages
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (bookingStep === 'booking') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <button
+            onClick={() => setBookingStep('details')}
+            className="flex items-center text-emerald-600 hover:text-emerald-700 font-medium mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Package Details
+          </button>
+          
+          <BookingForm
+            packageData={packageData}
+            bookingDetails={bookingData}
+            onSuccess={handleBookingSuccess}
+            onCancel={() => setBookingStep('details')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (bookingStep === 'success') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="text-green-600" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
+          <p className="text-gray-600 mb-4">
+            Your Umrah package has been successfully booked and paid for.
+          </p>
+          <div className="animate-pulse text-sm text-gray-500">
+            Redirecting to your bookings...
+          </div>
         </div>
       </div>
     );
@@ -296,15 +307,17 @@ export default function PackageDetailPage() {
                 <div className="text-gray-500">per person</div>
               </div>
 
-              {!showBookingForm ? (
+              {bookingStep === 'details' && (
                 <button
-                  onClick={() => setShowBookingForm(true)}
+                  onClick={() => setBookingStep('booking')}
                   className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
                 >
                   Book This Package
                 </button>
-              ) : (
-                <form onSubmit={handleBookingSubmit} className="space-y-4">
+              )}
+
+              {bookingStep === 'details' && (
+                <div className="mt-6 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -336,45 +349,6 @@ export default function PackageDetailPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={bookingData.customerName}
-                      onChange={(e) => setBookingData({ ...bookingData, customerName: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={bookingData.customerEmail}
-                      onChange={(e) => setBookingData({ ...bookingData, customerEmail: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={bookingData.customerPhone}
-                      onChange={(e) => setBookingData({ ...bookingData, customerPhone: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-
                   <div className="border-t pt-4">
                     <div className="flex justify-between text-lg font-semibold">
                       <span>Total Amount:</span>
@@ -383,23 +357,7 @@ export default function PackageDetailPage() {
                       </span>
                     </div>
                   </div>
-
-                  <div className="flex space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowBookingForm(false)}
-                      className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
-                    >
-                      Submit Request
-                    </button>
-                  </div>
-                </form>
+                </div>
               )}
 
               <div className="mt-6 space-y-3 text-sm text-gray-600">
