@@ -27,9 +27,6 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
     if (!user.email_verified) {
       return <Navigate to={`/email-verification?email=${encodeURIComponent(user.email)}`} replace />;
     }
-    if (!user.phone_verified) {
-      return <Navigate to="/phone-verification" replace />;
-    }
   }
 
   if (adminOnly && user.role !== 'admin') {

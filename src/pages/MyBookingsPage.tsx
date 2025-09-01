@@ -14,6 +14,7 @@ interface Booking {
   number_of_rooms: number;
   number_of_guests: number;
   status: string;
+  payment_status?: 'pending' | 'paid' | 'failed';
   total_amount: number;
   created_at: string;
   packages?: {
@@ -145,6 +146,19 @@ export default function MyBookingsPage() {
                             ${booking.total_amount.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">Total Amount</div>
+                          {booking.payment_status && (
+                            <div className="mt-2">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                booking.payment_status === 'paid' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : booking.payment_status === 'failed' 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                Payment: {booking.payment_status}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 

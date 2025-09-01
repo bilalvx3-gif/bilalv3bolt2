@@ -69,6 +69,15 @@ export default function PackageDetailPage() {
     }
   };
 
+  const handleBookingClick = () => {
+    if (!user) {
+      // Redirect unauthenticated users to login and return here after
+      navigate('/login', { replace: false, state: { from: { pathname: `/packages/${id}` } } });
+      return;
+    }
+    setBookingStep('booking');
+  };
+
   const handleBookingSuccess = () => {
     setBookingStep('success');
     setTimeout(() => {
@@ -309,7 +318,7 @@ export default function PackageDetailPage() {
 
               {bookingStep === 'details' && (
                 <button
-                  onClick={() => setBookingStep('booking')}
+                  onClick={handleBookingClick}
                   className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
                 >
                   Book This Package
@@ -334,7 +343,7 @@ export default function PackageDetailPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text sm font-medium text-gray-700 mb-2">
                         Guests
                       </label>
                       <select

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import EmailVerificationDebug from '../components/EmailVerificationDebug';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function EmailVerification() {
   const [searchParams] = useSearchParams();
@@ -21,16 +22,16 @@ export default function EmailVerification() {
 
     // Check if user is coming from email verification link
     const handleEmailConfirmation = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       
       if (data.session && data.session.user.email_confirmed_at) {
         setStatus('verified');
-        setMessage('Email verified successfully! Redirecting to phone verification...');
-        markEmailVerified();
+        setMessage('Email verified successfully! Redirecting to dashboard...');
+        await markEmailVerified();
         
-        // Redirect to phone verification after 2 seconds
+        // Redirect to dashboard after 2 seconds
         setTimeout(() => {
-          navigate('/phone-verification');
+          navigate('/');
         }, 2000);
       }
     };
@@ -56,7 +57,7 @@ export default function EmailVerification() {
       } else {
         setMessage('Verification email sent! Please check your inbox.');
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage('An error occurred. Please try again.');
     } finally {
       setIsResending(false);

@@ -76,9 +76,25 @@ interface Booking {
   number_of_rooms: number;
   number_of_guests: number;
   status: string;
+  payment_status?: 'pending' | 'paid' | 'failed';
   total_amount: number;
   created_at: string;
   packages?: { title: string };
+  personal_info?: {
+    title?: string;
+    givenName?: string;
+    surname?: string;
+    countryOfResidence?: string;
+    nationality?: string;
+    birthDate?: string;
+    passportNumber?: string;
+    passportIssueCountry?: string;
+    passportIssueDate?: string;
+    passportExpirationDate?: string;
+    hasValidVisa?: boolean;
+    email?: string;
+    phone?: string;
+  } | null;
 }
 
 export default function AdminDashboard() {
@@ -92,6 +108,8 @@ export default function AdminDashboard() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsBooking, setDetailsBooking] = useState<Booking | null>(null);
   
   // Modal states
   const [showAddPackageModal, setShowAddPackageModal] = useState(false);
@@ -177,6 +195,16 @@ export default function AdminDashboard() {
     if (!error && data) {
       setBookings(data);
     }
+  };
+
+  const openDetails = (booking: Booking) => {
+    setDetailsBooking(booking);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetails = () => {
+    setShowDetailsModal(false);
+    setDetailsBooking(null);
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
@@ -778,6 +806,7 @@ export default function AdminDashboard() {
               <th className="text-left py-3 px-4 font-semibold text-gray-600">Total</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-600">Date</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-600">Payment</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
@@ -824,8 +853,22 @@ export default function AdminDashboard() {
                   </select>
                 </td>
                 <td className="py-3 px-4">
-                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <Eye size={16} />
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    booking.payment_status === 'paid' 
+                      ? 'bg-green-100 text-green-800' 
+                      : booking.payment_status === 'failed' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {booking.payment_status || 'pending'}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <button
+                    onClick={() => openDetails(booking)}
+                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Details
                   </button>
                 </td>
               </tr>
@@ -898,6 +941,62 @@ export default function AdminDashboard() {
         onClose={() => setShowAddFlightModal(false)}
         onSuccess={fetchFlights}
       />
+
+      {/* Booking Details Modal */}
+      {showDetailsModal && detailsBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={closeDetails}></div>
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Booking Details</h3>
+              <button onClick={closeDetails} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Given Name</p>
+                <p className="font-medium">{detailsBooking.personal_info?.givenName || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Surname</p>
+                <p className="font-medium">{detailsBooking.personal_info?.surname || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Country of Residence</p>
+                <p className="font-medium">{detailsBooking.personal_info?.countryOfResidence || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Nationality</p>
+                <p className="font-medium">{detailsBooking.personal_info?.nationality || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Birth Date</p>
+                <p className="font-medium">{detailsBooking.personal_info?.birthDate || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Passport Number</p>
+                <p className="font-medium">{detailsBooking.personal_info?.passportNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Passport Issue Country</p>
+                <p className="font-medium">{detailsBooking.personal_info?.passportIssueCountry || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Passport Issue Date</p>
+                <p className="font-medium">{detailsBooking.personal_info?.passportIssueDate || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Passport Expiration Date</p>
+                <p className="font-medium">{detailsBooking.personal_info?.passportExpirationDate || '—'}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button onClick={closeDetails} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

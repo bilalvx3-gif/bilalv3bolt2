@@ -9,7 +9,6 @@ interface User {
   phone?: string;
   role: 'customer' | 'admin';
   email_verified: boolean;
-  phone_verified: boolean;
   created_at: string;
 }
 
@@ -20,7 +19,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string, phone?: string) => Promise<boolean>;
   markEmailVerified: () => void;
-  markPhoneVerified: () => void;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -32,7 +30,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isVerificationComplete = user ? user.email_verified && user.phone_verified : false;
+  const isVerificationComplete = user ? user.email_verified : false;
+
+  // Debug logging for verification status
+  console.log('AuthContext Debug:', {
+    user: user ? { 
+      id: user.id, 
+      role: user.role, 
+      email_verified: user.email_verified,
+      name: user.name 
+    } : null,
+    isVerificationComplete,
+    timestamp: new Date().toISOString()
+  });
 
   useEffect(() => {
     // Get initial session
@@ -75,6 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const authUser = authUserRes?.user;
 
         if (authUser) {
+          // Check if email is confirmed in Supabase auth
+          const isEmailConfirmed = !!authUser.email_confirmed_at;
+          
           const { error: insertError, data: inserted } = await supabase
             .from('users')
             .insert({
@@ -83,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: authUser.email,
               phone: authUser.user_metadata?.phone || null,
               role: 'customer',
+              email_verified: isEmailConfirmed,
             })
             .select()
             .single();
@@ -94,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: inserted.email,
               phone: inserted.phone || undefined,
               role: inserted.role as 'customer' | 'admin',
+              email_verified: inserted.email_verified || false,
               created_at: inserted.created_at,
             });
             return;
@@ -115,7 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone: data.phone,
           role: data.role as 'customer' | 'admin',
           email_verified: data.email_verified || false,
-          phone_verified: data.phone_verified || false,
           created_at: data.created_at,
         });
       }
@@ -126,15 +140,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const markEmailVerified = () => {
+  const markEmailVerified = async () => {
     if (user) {
-      setUser({ ...user, email_verified: true });
-    }
-  };
+      try {
+        // Update the database
+        const { error } = await supabase
+          .from('users')
+          .update({ email_verified: true })
+          .eq('id', user.id);
 
-  const markPhoneVerified = () => {
-    if (user) {
-      setUser({ ...user, phone_verified: true });
+        if (error) {
+          console.error('Error updating email verification status:', error);
+          return;
+        }
+
+        // Update local state
+        setUser({ ...user, email_verified: true });
+      } catch (error) {
+        console.error('Error marking email as verified:', error);
+      }
     }
   };
 
@@ -216,7 +240,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login, 
       signup, 
       markEmailVerified,
-      markPhoneVerified,
       logout, 
       isLoading 
     }}>

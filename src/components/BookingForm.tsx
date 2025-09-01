@@ -69,7 +69,7 @@ function PaymentForm({
     setIsProcessing(true);
 
     try {
-      // Create booking with pending_payment status
+      // Create booking with pending status and payment_status pending
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
@@ -81,7 +81,8 @@ function PaymentForm({
           number_of_rooms: bookingDetails.rooms,
           number_of_guests: bookingDetails.guests,
           total_amount: totalAmount,
-          status: 'pending_payment',
+          status: 'pending',
+          payment_status: 'pending',
           personal_info: personalInfo
         })
         .select()
@@ -89,20 +90,25 @@ function PaymentForm({
 
       if (bookingError) throw bookingError;
 
-      // Create payment intent
-      const response = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Create payment intent via Supabase Edge Function
+      const { data: intentData, error: intentError } = await supabase.functions.invoke('create-payment-intent', {
+        body: {
           amount: totalAmount * 100, // Convert to cents
           bookingId: booking.id,
           customerEmail: personalInfo.email
-        }),
+        }
       });
 
-      const { clientSecret } = await response.json();
+      if (intentError || !intentData || !(intentData as any).clientSecret) {
+        // Mark payment as failed if we couldn't create intent
+        await supabase
+          .from('bookings')
+          .update({ payment_status: 'failed' })
+          .eq('id', booking.id);
+        throw new Error(intentError?.message || 'Failed to create payment intent');
+      }
+
+      const clientSecret = (intentData as any).clientSecret;
 
       // Confirm payment
       const cardElement = elements.getElement(CardElement);
@@ -119,18 +125,33 @@ function PaymentForm({
       });
 
       if (paymentError) {
+        // Mark payment as failed
+        await supabase
+          .from('bookings')
+          .update({ payment_status: 'failed' })
+          .eq('id', booking.id);
         onError(paymentError.message || 'Payment failed');
         return;
       }
 
-      // Update booking status to confirmed
+      // Update booking status to confirmed and payment_status to paid
       await supabase
         .from('bookings')
-        .update({ status: 'confirmed' })
+        .update({ status: 'confirmed', payment_status: 'paid' })
         .eq('id', booking.id);
 
       onSuccess();
     } catch (error: any) {
+      // Best-effort: if booking exists in scope, mark payment failed
+      try {
+        const bookingId = (error && (error as any).bookingId) ? (error as any).bookingId : undefined;
+        if (bookingId) {
+          await supabase
+            .from('bookings')
+            .update({ payment_status: 'failed' })
+            .eq('id', bookingId);
+        }
+      } catch {}
       onError(error.message || 'Payment processing failed');
     } finally {
       setIsProcessing(false);

@@ -30,8 +30,23 @@ export default function Navigation() {
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
 
-  // Hide navigation for unverified users (except admin)
-  const showNavigation = !user || user.role === 'admin' || isVerificationComplete;
+  // Show navigation for all users to allow basic navigation
+  // Access to protected routes is controlled by ProtectedRoute component
+  const showNavigation = true;
+
+  // Debug logging
+  console.log('Navigation Debug:', {
+    user: user ? { 
+      id: user.id, 
+      role: user.role, 
+      email_verified: user.email_verified,
+      name: user.name 
+    } : null,
+    isVerificationComplete,
+    showNavigation,
+    location: location.pathname,
+    timestamp: new Date().toISOString()
+  });
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100">
